@@ -1,0 +1,136 @@
+'''
+Challenge #2
+Summary
+To write code that will query the meta data of an instance within aws and provide a json formatted output. The choice of language and implementation is up to you.
+ 
+Bonus Points
+The code allows for a particular data key to be retrieved individually
+
+Solution:
+
+- Metadata of a particular instance
+- There are two possibilities:
+1) Querying the information from within AWS instance
+2) Querying the instance externally
+
+1) If within the instance, the metadata can be obtained via accessing http://169.254.169.254/latest/meta-data/
+- There is also a command line variant to do the same e.g. 
+curl http://169.254.169.254/latest/meta-data/
+
+2) Querying this information externally:
+
+Logic -> (For python)
+Step 1: Create a connection to instance using boto3
+Step 2: Get ec2_metadata package(this package needs to be pip installed beforehand)
+Step 3: Create a list of all attributes i.e. all metadata -> ['region','id','ami-id',...]
+Step 4: Create an empty dictionary (eg. response)
+Step 5: Go through (iterate) every attribute from step 3
+	In this dictionary, for every attribute, key=attribute name and value = attribute value
+	e.g response['region'] = region attribute of the ec2 instance
+
+Step 6: {'region':'eu-west-2','id':101010,'iam/id':'12345',...}
+Step 7: return the dictionary object in json format
+'''
+
+# Code -> (For python)
+
+import json
+import boto3
+
+# Get ec2_metadata (this package needs to be pip installed beforehand)
+from ec2_metadata import ec2_metadata
+
+#Creating function
+def retrieve_metadata(data_key=0):
+
+	# If no argument passed in, return all metadata
+	if data_key == 0: # data_key = 0
+		# Create a connection to instance using boto3
+		# Note aws key and secret needs to be correctly configured for this to work
+		client = boto3.client('ec2', 'aws_secret_key_id'='xyz','aws_access_key_id'='abc')	
+
+		# Creating a list of all attributes i.e. all metadata
+		list_attributes = dir(ec2_metadata)
+
+		# Creating an empty dictionary
+		response = {}
+
+		# For every attribute, key=attribute name and value = attribute value
+		for attribute in list_attributes:
+			response[attribute] = getattr(ec2_metadata,attribute)
+			#e.g. response['region'] = ec2_metadata.region
+
+		# return the key,value object in json format
+		return json.dumps(response)
+	else:
+		# Create a connection to instance using boto3
+		# Note aws key and secret needs to be correctly configured for this to work
+		client = boto3.client('ec2', 'aws_secret_key_id'='xyz','aws_access_key_id'='abc')
+
+		# returning only metadata for this key
+		response = {data_key:getattr(ec2_metadata, data_key)}
+		return json.dumps(response)
+		#e.g. return ec2_metadata.data_key (e.g. region)
+
+-- Example use cases
+# Retrieving all metadata
+all_metadata = retrieve_metadata()
+
+# Retrieving individual data key
+particular_metadata = retrieve_metadata(data_key='region')
+-----------------------------------------------------------------------------------------------------------------------------
+
+'''Challenge #3
+We have a nested object, we would like a function that you pass in the object and a key and get back the value. How this is implemented is up to you
+
+# Nested object
+{
+	'Key':'value1',
+	'Key2':'Value2'
+}
+
+{
+	'Key':{
+		'Key3':'value1'
+			},
+	'Key2':'Value2'
+}
+
+Logic:
+Step 1: Create a list of keys for nested object
+Step 2: Iterating through each of these
+	Try and get the value for the key
+		If this works, go to next key and repeat
+		Once all keys have been checked, return value
+	If this does not work, return 'Value does not exist'
+
+'''
+
+# Defining function
+# Object = nested dictionary
+# Key = '/' separated keys e.g. x/y/z
+def retrieve_val(object, key):
+
+	# Create a list of keys
+	keys = key.split('/')
+	# ['x','y','z']
+
+	# Iterating through each key
+	for k in keys:
+
+		# Try and get the value for the key
+		try:
+			curr = object.get(k)
+			object = curr
+		# If it does not exist, break the loop
+		except:
+			return 'Does not exist'
+
+	return object
+
+# Use case
+# object = {'x':{'y':{'z':2}}}
+retrieve_val(nested_object,'x/y/z')
+
+--------------------------------------------------------------------------------------------------
+
